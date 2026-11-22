@@ -14,7 +14,7 @@
     </a>
 
     <div class="container min-vh-100 d-flex flex-column justify-content-center align-items-center py-5">
-        
+
         <form class="p-4 bg-light rounded border shadow mb-4" style="width: 100%; max-width: 400px;" method="POST" action="/registrar_faturamento">
             <h5 class="fw-bold mb-3 text-center">Faturamento Diário</h5>
             <div class="mb-3">
@@ -26,9 +26,20 @@
             </div>
             <button type="submit" class="btn btn-success w-100 fw-bold">Registrar</button>
         </form>
-        
+
         <div class="p-4 bg-light rounded border shadow" style="width: 100%; max-width: 400px;">
-            <h5 class="fw-bold mb-3 text-center">Histórico</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Histórico</h5>
+                <form action="/faturamento" method="GET" class="mb-0">
+                    <select id="EscolherMes" name="EscolherMes" class="form-select form-select-sm" onchange="this.form.submit()">
+                        {% for mes in dados.meses %}
+                            <option value="{{ mes }}" {% if mes == dados.mes_selecionado %}selected{% endif %}>
+                                {{ mes }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover text-center mb-0">
                     <thead class="table-dark">
@@ -38,7 +49,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in historico|reverse %}
+                        {% for item in dados.registros|reverse %}
                         <tr>
                             <td>
                                 {{ item.data }} <br>
@@ -48,10 +59,16 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="2" class="text-muted py-3">Nenhum faturamento registrado.</td>
+                            <td colspan="2" class="text-muted py-3">Nenhum faturamento registrado neste mês.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot class="table-group-divider fw-bold">
+                        <tr class="table-light">
+                            <td class="text-start">Total do mês</td>
+                            <td class="text-success">R$ {{ "%.2f"|format(dados.total_faturamento) }}</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
