@@ -10,18 +10,61 @@
     <a href="{{ url_for('menu_principal') }}" class="btn btn-dark bg-opacity-75 text-white position-absolute top-0 start-0 m-3 shadow border border-secondary rounded-3 d-flex align-items-center gap-2 fw-bold">
         <span>⬅</span> Menu
     </a>
+<div class="container min-vh-100 d-flex flex-column justify-content-center align-items-center py-5">
 
-    <div class="d-flex justify-content-center align-items-center vh-100 flex-column">
-        
-        <form class="p-4 bg-light rounded border shadow" style="width: 100%; max-width: 350px;" method="POST" action="/registrar_ovos">
-            <h5 class="fw-bold mb-3 text-center">Ovos Diários</h5>
-            <div class="mb-3">
-                <label for="inputvalor" class="form-label fw-bold">Insira a quantidade de ovos do dia</label>
-                <input type="number" name="quantidade_ovos" min="0" step="1" class="form-control" id="inputvalor" placeholder="0" required>
-            </div>
-          
-            <button type="submit" class="btn btn-success w-100 fw-bold">Registrar</button>
-        </form>
+    <form class="p-4 bg-light rounded border shadow mb-4" style="width: 100%; max-width: 400px;" method="POST" action="/registrar_ovos">
+        <h5 class="fw-bold mb-3 text-center">Ovos Diários</h5>
+        <div class="mb-3">
+            <label for="inputvalor" class="form-label fw-bold">Insira a quantidade de ovos do dia</label>
+            <input type="number" name="quantidade_ovos" min="0" step="1" class="form-control" id="inputvalor" placeholder="0" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100 fw-bold">Registrar</button>
+    </form>
+        <div class="p-4 bg-light rounded border shadow" style="width: 100%; max-width: 400px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Histórico</h5>
+            <form action="/ovos" method="GET" class="mb-0">
+                <select id="EscolherMes" name="EscolherMes" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for mes in dados.meses %}
+                        <option value="{{ mes }}" {% if mes == dados.mes_selecionado %}selected{% endif %}>
+                            {{ mes }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover text-center mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">Data / Hora</th>
+                        <th scope="col">Quantidade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in dados.registros|reverse %}
+                    <tr>
+                        <td>
+                            {{ item.data }} <br>
+                            <small class="text-muted">{{ item.hora }}</small>
+                        </td>
+                        <td class="align-middle fw-semibold text-success">{{ item.quantidade }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2" class="text-muted py-3">Nenhum ovo registrado neste mês.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-group-divider fw-bold">
+                    <tr class="table-light">
+                        <td class="text-start">Total do mês</td>
+                        <td class="text-success">{{ dados.total_ovos }} Ovos</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
+</div>
 </body>
 </html>
