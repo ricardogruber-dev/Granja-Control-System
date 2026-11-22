@@ -7,11 +7,13 @@ app = Flask(__name__)
 
 # ARQUIVOS JSON
 
-caminho_arquivo_categorias = "nome_despesas.json"
-caminho_arquivo_gastos = "gastos.json"
-caminho_arquivo_ovos = "ovos.json" 
-caminho_arquivo_faturamento = "faturamento.json"
-caminho_arquivo_resumo = "resumo_mensal.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+ARQUIVO_CATEGORIAS = os.path.join(BASE_DIR, "nome_despesas.json")
+ARQUIVO_GASTOS = os.path.join(BASE_DIR, "gastos.json")
+ARQUIVO_OVOS = os.path.join(BASE_DIR, "ovos.json")
+ARQUIVO_FATURAMENTO = os.path.join(BASE_DIR, "faturamento.json")
+ARQUIVO_RESUMO = os.path.join(BASE_DIR, "resumo_mensal.json")
 
 
 # FUNÇÕES DE ESCRITA E LEITURA
@@ -30,14 +32,32 @@ def salvar_json(caminho, dados):
         json.dump(dados, f, ensure_ascii=False, indent=4)
 
 
+# FUNÇÕES AUXILIARES
+
+def listar_meses(registros):
+    """Retorna os meses (MM/AAAA) dos registros, do mais recente para o mais antigo."""
+    meses = {item.get("data", "")[3:] for item in registros if len(item.get("data", "")) >= 10}
+    meses = sorted(meses, key=lambda m: (m[3:], m[:2]), reverse=True)
+    return meses or [datetime.now().strftime("%m/%Y")]
+
+def converter_valor(texto):
+    """Converte '12,50', '1.250,75' ou '12.50' para float. Levanta ValueError se inválido."""
+    texto = texto.strip()
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    valor = float(texto)
+    if valor != valor or valor in (float("inf"), float("-inf")) or valor < 0:
+        raise ValueError("valor inválido")
+    return valor
+
 
 # FUNÇÕES DA TELA 1 (DESPESAS)
 
 def ler_categorias():
-    return ler_json(caminho_arquivo_categorias, [])
+    return ler_json(ARQUIVO_CATEGORIAS, [])
 
 def ler_gastos():
-    return ler_json(caminho_arquivo_gastos, [])
+    return ler_json(ARQUIVO_GASTOS, [])
 
 def salvar_nome_despesa(nova_categoria):
     nova_categoria = nova_categoria.strip()
@@ -47,7 +67,7 @@ def salvar_nome_despesa(nova_categoria):
     categorias = ler_categorias()
     if nova_categoria not in categorias:
         categorias.append(nova_categoria)
-        salvar_json(caminho_arquivo_categorias, categorias)
+        salvar_json(ARQUIVO_CATEGORIAS, categorias)
 
 def salvar_gasto(categoria, valor):
     gastos = ler_gastos()
@@ -62,12 +82,12 @@ def salvar_gasto(categoria, valor):
     if not encontrado:
         gastos.append({"categoria": categoria, "valor": valor})
 
-    salvar_json(caminho_arquivo_gastos, gastos)
+    salvar_json(ARQUIVO_GASTOS, gastos)
 
 
 # FUNÇÕES DA TELA 2 (Ovos)
 def ler_ovos():
-    return ler_json(caminho_arquivo_ovos, [])
+    return ler_json(ARQUIVO_OVOS, [])
 
 def salvar_ovos(quantidade):
     registros = ler_ovos()
@@ -79,13 +99,29 @@ def salvar_ovos(quantidade):
         "hora": agora.strftime("%H:%M:%S")
     })
 
-    salvar_json(caminho_arquivo_ovos, registros)
+    salvar_json(ARQUIVO_OVOS, registros)
 
+def obter_dados_tela_ovos(mes_solicitado=None):
+    registros = ler_ovos()
+
+    meses_disponiveis = listar_meses(registros)
+
+    mes_selecionado = mes_solicitado if mes_solicitado in meses_disponiveis else meses_disponiveis[0]
+
+    registros_do_mes = [r for r in registros if r.get("data", "")[3:] == mes_selecionado]
+    total_ovos = sum(int(r.get("quantidade", 0)) for r in registros_do_mes)
+
+    return {
+        "meses": meses_disponiveis,
+        "mes_selecionado": mes_selecionado,
+        "registros": registros_do_mes,
+        "total_ovos": total_ovos
+    }
 
 # FUNÇÕES DA TELA 3 (Faturamentos)
 
 def ler_faturamento():
-    return ler_json(caminho_arquivo_faturamento, [])
+    return ler_json(ARQUIVO_FATURAMENTO, [])
 
 def salvar_faturamento(valor_recebido):
     registros = ler_faturamento()
@@ -97,13 +133,33 @@ def salvar_faturamento(valor_recebido):
         "hora": agora.strftime("%H:%M:%S")
     })
 
-    salvar_json(caminho_arquivo_faturamento, registros)
+    salvar_json(ARQUIVO_FATURAMENTO, registros)
 
+def obter_dados_tela_faturamento(mes_solicitado=None):
+    faturamentos = ler_faturamento()
+
+    meses_disponiveis = listar_meses(faturamentos)
+
+    mes_selecionado = mes_solicitado if mes_solicitado in meses_disponiveis else meses_disponiveis[0]
+
+    registros_mes = [
+        item for item in faturamentos
+        if item.get("data", "")[3:] == mes_selecionado
+    ]
+
+    total_faturamento = sum(float(item.get("valor_ganho", 0)) for item in registros_mes)
+
+    return {
+        "meses": meses_disponiveis,
+        "mes_selecionado": mes_selecionado,
+        "registros": registros_mes,
+        "total_faturamento": total_faturamento
+    }
 
 # FUNÇÕES DA TELA 4 (Lucro)
 
 def ler_resumos():
-    return ler_json(caminho_arquivo_resumo, {})
+    return ler_json(ARQUIVO_RESUMO, {})
 
 def salvar_resumo_json(mes, faturamento, despesas, lucro):
     resumos = ler_resumos()
@@ -112,19 +168,13 @@ def salvar_resumo_json(mes, faturamento, despesas, lucro):
         "despesas": despesas,
         "lucro": lucro
     }
-    salvar_json(caminho_arquivo_resumo, resumos)
+    salvar_json(ARQUIVO_RESUMO, resumos)
 
 def obter_dados_tela_lucro(mes_solicitado=None):
     faturamentos = ler_faturamento()
     gastos = ler_gastos()
 
-    meses_disponiveis = sorted(
-        list(set(item.get("data", "")[3:] for item in faturamentos if len(item.get("data", "")) >= 10)),
-        reverse=True
-    )
-
-    if not meses_disponiveis:
-        meses_disponiveis = [datetime.now().strftime("%m/%Y")]
+    meses_disponiveis = listar_meses(faturamentos)
 
     mes_selecionado = mes_solicitado if mes_solicitado in meses_disponiveis else meses_disponiveis[0]
 
@@ -182,7 +232,7 @@ def registrar_gasto():
 
     if categoria_selecionada and valor_informado:
         try:
-            salvar_gasto(categoria_selecionada, float(valor_informado))
+            salvar_gasto(categoria_selecionada, converter_valor(valor_informado))
         except ValueError:
             pass
 
@@ -192,8 +242,9 @@ def registrar_gasto():
 # --- TELA 2: OVOS ---
 @app.route("/ovos", methods=['GET'])
 def tela_ovos():
-    registros_ovos = ler_ovos
-    return render_template("ovos.html")
+    mes_solicitado = request.args.get('EscolherMes')
+    dados = obter_dados_tela_ovos(mes_solicitado)
+    return render_template("ovos.html", dados=dados)
 
 @app.route("/registrar_ovos", methods=['POST'])
 def registrar_ovos():
@@ -210,8 +261,9 @@ def registrar_ovos():
 # --- TELA 3: FATURAMENTO ---
 @app.route("/faturamento", methods=['GET'])
 def tela_faturamento():
-    registros = ler_faturamento()
-    return render_template("faturamento.html", historico=registros)
+    mes_solicitado = request.args.get('EscolherMes')
+    dados = obter_dados_tela_faturamento(mes_solicitado)
+    return render_template("faturamento.html", dados=dados)
 
 @app.route("/registrar_faturamento", methods=['POST'])
 def registrar_faturamento():
@@ -219,7 +271,7 @@ def registrar_faturamento():
 
     if valor_form:
         try:
-            salvar_faturamento(float(valor_form))
+            salvar_faturamento(converter_valor(valor_form))
         except ValueError:
             pass
 
